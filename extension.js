@@ -3,7 +3,10 @@
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
-
+const player = require('play-sound')({
+  players: ['ffplay'],
+  player: 'ffplay'
+});
 // Motivational messages
 const motivationalMessages = [
 	"WORK FASTER YOU LAZY FUCK!",
@@ -19,7 +22,7 @@ const motivationalMessages = [
 ];
 
 let statusBarItem;
-let whipAudioPanel = null; // Add a variable to hold the WebView panel
+// let whipAudioPanel = null; // Remove WebView panel variable
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -73,91 +76,20 @@ async function playWhipSound(context) {
 		return;
 	}
 
-	// Dispose of the old panel if it exists
-	if (whipAudioPanel) {
-		whipAudioPanel.dispose();
-		whipAudioPanel = null;
-	}
-
-	// Create a new hidden WebView panel
-	whipAudioPanel = vscode.window.createWebviewPanel(
-		'whipAudioPlayer', // Identifies the type of the webview. Used internally
-		'Whip Audio Player', // Title of the panel displayed to the user (not visible here)
-		{ viewColumn: vscode.ViewColumn.Beside, preserveFocus: true }, // Show beside but don't steal focus
-		{
-			enableScripts: true,
-			localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'media'))]
+	// Use play-sound to play the audio file
+	player.play(whipSoundPath, (err) => {
+		if (err) {
+			console.error("Error playing sound:", err);
+			vscode.window.showErrorMessage(`Failed to play whip sound: ${err.message || err}`);
 		}
-	);
+	});
 
-	// Make the panel hidden by moving it to a background group (hacky but common)
-	// This relies on internal commands and might break in future VS Code versions.
-	// A truly hidden way isn't directly supported, this makes it non-visible.
-	// await vscode.commands.executeCommand('workbench.action.closeActiveEditor'); // Temporarily removed for testing
-
-
-	const webviewUri = whipAudioPanel.webview.asWebviewUri(vscode.Uri.file(whipSoundPath));
-
-	whipAudioPanel.webview.html = getWebviewContent(webviewUri);
-
-	// Send a message to the WebView to play the sound after it likely has loaded
-	whipAudioPanel.webview.postMessage({ command: 'play' });
-
-	// Optional: Auto-dispose after a short time if you don't need it persistent
-	// setTimeout(() => {
-	//     if (whipAudioPanel) {
-	//         whipAudioPanel.dispose();
-	//         whipAudioPanel = null;
-	//     }
-	// }, 5000); // Dispose after 5 seconds
-
-
-	// Handle disposal
-	whipAudioPanel.onDidDispose(() => {
-		whipAudioPanel = null;
-	}, null, context.subscriptions);
-
-
+	// No need for async/await here unless player.play returned a promise we needed
+	// The sound plays in a separate process.
 }
 
-// Function to generate the HTML content for the WebView
-function getWebviewContent(soundUri) {
-	return `<!DOCTYPE html>
-	<html lang="en">
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>Whip Sound</title>
-	</head>
-	<body>
-		<audio id="whip-audio">
-			<source src="${soundUri}" type="audio/mpeg">
-			Your browser does not support the audio element.
-		</audio>
-		<script>
-			const audio = document.getElementById('whip-audio');
-			const vscode = acquireVsCodeApi(); // Get the API object
-
-			// Handle messages from the extension
-			window.addEventListener('message', event => {
-				const message = event.data; // The JSON data that the extension sent
-				switch (message.command) {
-					case 'play':
-						audio.play().catch(e => {
-							console.error("Audio play failed:", e);
-							// Optionally send error back to extension
-							vscode.postMessage({ command: 'audioError', error: e.toString() });
-						});
-						break;
-				}
-			});
-
-			// Optional: Notify extension when ready (though postMessage after setting HTML is usually sufficient)
-			// vscode.postMessage({ command: 'ready' });
-		</script>
-	</body>
-	</html>`;
-}
+// Function to generate the HTML content for the WebView - REMOVED
+// function getWebviewContent(soundUri) { ... }
 
 async function sendToCopilotChat(text) {
 	try {
@@ -194,10 +126,10 @@ async function sendToCopilotChat(text) {
 
 // This method is called when your extension is deactivated
 function deactivate() {
-	// Dispose the webview panel if it exists
-	if (whipAudioPanel) {
-		whipAudioPanel.dispose();
-	}
+	// Dispose the webview panel if it exists - REMOVED
+	// if (whipAudioPanel) {
+	// 	whipAudioPanel.dispose();
+	// }
 	if (statusBarItem) {
 		statusBarItem.dispose();
 	}
