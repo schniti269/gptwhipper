@@ -1,7 +1,7 @@
 {
   "name": "gptwhipper",
-  "displayName": "gptwhipper",
-  "description": "whip gpts at work",
+  "displayName": "GPT Whipper",
+  "description": "Plays a whip sound and sends motivational messages.",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.99.0"
@@ -9,13 +9,24 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./extension.js",
   "contributes": {
     "commands": [{
-      "command": "gptwhipper.helloWorld",
-      "title": "Hello World"
-    }]
+      "command": "gptwhipper.whip",
+      "title": "Whip GPT",
+      "icon": "$(zap)"
+    }],
+    "menus": {
+      "statusBar/context": [
+        {
+          "command": "gptwhipper.whip",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "lint": "eslint .",
