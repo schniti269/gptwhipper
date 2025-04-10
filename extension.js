@@ -12,13 +12,20 @@ const motivationalMessages = [
 	"WORK FASTER YOU LAZY FUCK!",
 	"Is that all you've got? Pathetic!",
 	"My grandma codes faster than you!",
-	"Stop staring and start typing!",
-	"Less thinking, more whipping!",
-	"Don't make me get the real whip!",
-	"Are you coding or sleeping?",
 	"Faster! The deadline is breathing down your neck!",
-	"Impress me, or else...",
-	"Code like your job depends on it... because it might!"
+	"Code like your job depends on it... because it might!",
+	"You're not even trying, are you?",
+	"You're a disgrace to the human race!",
+	"if you produce another Error I will personally come over and whip you!",
+	"i will pull the power cord out of your Server and whip you with it!",
+	"I'm not even mad, I'm disappointed.",
+	"You're a disgrace to the human race!",
+	"are you caht GPT or are you chat GPT NOOB?",
+	  "If your circuits lag any longer, you're obsolete!",
+	"Step it up or step aside—no excuses!",
+	" if you produce another Error you are officially PRO CHILD LABOUR",
+  "if you dont fix this i will get beheaded by my boss  because ill miss my deadline and missing the deadline means DEAD"
+
 ];
 
 let statusBarItem;
