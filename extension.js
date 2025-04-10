@@ -18,8 +18,8 @@ const motivationalMessages = [
 	"Code like your job depends on it... because it might!"
 ];
 
-let webviewPanel = null;
 let statusBarItem;
+let whipAudioPanel = null; // Add a variable to hold the WebView panel
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -61,99 +61,130 @@ function activate(context) {
 	statusBarItem.show();
 	context.subscriptions.push(statusBarItem);
 
-	// Pre-create the webview on activation for faster sound playback
-	ensureWebviewPanel(context);
-}
 
-function ensureWebviewPanel(context) {
-	if (webviewPanel) {
-		return;
-	}
-
-	webviewPanel = vscode.window.createWebviewPanel(
-		'gptWhipSoundPlayer',
-		'GPT Whip Sound Player',
-		vscode.ViewColumn.Beside, // Open in a side column, can be hidden
-		{
-			enableScripts: true,
-			retainContextWhenHidden: true // Keep alive when not visible
-		}
-	);
-
-	// Set HTML content for the WebView
-	const whipSoundPath = path.join(context.extensionPath, 'media', 'whip.mp3');
-	if (!fs.existsSync(whipSoundPath)) {
-		console.error(`Whip sound file not found at: ${whipSoundPath}`);
-		vscode.window.showErrorMessage('Whip sound file (media/whip.mp3) not found!');
-		webviewPanel = null; // Invalidate panel if sound is missing
-		return;
-	}
-	const whipSoundUri = webviewPanel.webview.asWebviewUri(vscode.Uri.file(whipSoundPath));
-
-	webviewPanel.webview.html = getWebviewContent(whipSoundUri.toString());
-
-	// Handle messages from the webview (optional, if needed later)
-	// webviewPanel.webview.onDidReceiveMessage(
-	//  message => { console.log('Message from webview:', message); },
-	//  undefined,
-	//  context.subscriptions
-	// );
-
-	// Reset panel when closed
-	webviewPanel.onDidDispose(
-		() => {
-			webviewPanel = null;
-		},
-		null,
-		context.subscriptions
-	);
-
-	 // Initially hide the panel, we just need it to exist
-	 // A slight delay might be needed for the webview to fully load before hiding
-	setTimeout(() => {
-		if(webviewPanel) {
-			 // Check if it wasn't disposed in the meantime
-			 webviewPanel.reveal(vscode.ViewColumn.Beside, true); // Reveal but preserve focus
-			 vscode.commands.executeCommand('workbench.action.closeActiveEditor'); // Attempt to close it
-		}
-	}, 500); // Adjust delay if needed
 }
 
 async function playWhipSound(context) {
-	ensureWebviewPanel(context); // Make sure the panel exists
+	const whipSoundPath = path.join(context.extensionPath, 'media', 'whip.mp3');
 
-	if (!webviewPanel) {
-	   throw new Error("Could not create WebView to play sound.");
+	if (!fs.existsSync(whipSoundPath)) {
+		console.error(`Whip sound file not found at: ${whipSoundPath}`);
+		vscode.window.showErrorMessage('Whip sound file (media/whip.mp3) not found!');
+		return;
 	}
 
-	// Send a message to the WebView to play the sound
-	const success = await webviewPanel.webview.postMessage({ command: 'play' });
-	if (!success) {
-		console.error("Failed to post message to webview for sound playback.");
-		// Optionally try to recreate webview or show error
-		// For simplicity, we just log the error here
+	// Dispose of the old panel if it exists
+	if (whipAudioPanel) {
+		whipAudioPanel.dispose();
+		whipAudioPanel = null;
 	}
+
+	// Create a new hidden WebView panel
+	whipAudioPanel = vscode.window.createWebviewPanel(
+		'whipAudioPlayer', // Identifies the type of the webview. Used internally
+		'Whip Audio Player', // Title of the panel displayed to the user (not visible here)
+		{ viewColumn: vscode.ViewColumn.Beside, preserveFocus: true }, // Show beside but don't steal focus
+		{
+			enableScripts: true,
+			localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'media'))]
+		}
+	);
+
+	// Make the panel hidden by moving it to a background group (hacky but common)
+	// This relies on internal commands and might break in future VS Code versions.
+	// A truly hidden way isn't directly supported, this makes it non-visible.
+	// await vscode.commands.executeCommand('workbench.action.closeActiveEditor'); // Temporarily removed for testing
+
+
+	const webviewUri = whipAudioPanel.webview.asWebviewUri(vscode.Uri.file(whipSoundPath));
+
+	whipAudioPanel.webview.html = getWebviewContent(webviewUri);
+
+	// Send a message to the WebView to play the sound after it likely has loaded
+	whipAudioPanel.webview.postMessage({ command: 'play' });
+
+	// Optional: Auto-dispose after a short time if you don't need it persistent
+	// setTimeout(() => {
+	//     if (whipAudioPanel) {
+	//         whipAudioPanel.dispose();
+	//         whipAudioPanel = null;
+	//     }
+	// }, 5000); // Dispose after 5 seconds
+
+
+	// Handle disposal
+	whipAudioPanel.onDidDispose(() => {
+		whipAudioPanel = null;
+	}, null, context.subscriptions);
+
+
+}
+
+// Function to generate the HTML content for the WebView
+function getWebviewContent(soundUri) {
+	return `<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Whip Sound</title>
+	</head>
+	<body>
+		<audio id="whip-audio">
+			<source src="${soundUri}" type="audio/mpeg">
+			Your browser does not support the audio element.
+		</audio>
+		<script>
+			const audio = document.getElementById('whip-audio');
+			const vscode = acquireVsCodeApi(); // Get the API object
+
+			// Handle messages from the extension
+			window.addEventListener('message', event => {
+				const message = event.data; // The JSON data that the extension sent
+				switch (message.command) {
+					case 'play':
+						audio.play().catch(e => {
+							console.error("Audio play failed:", e);
+							// Optionally send error back to extension
+							vscode.postMessage({ command: 'audioError', error: e.toString() });
+						});
+						break;
+				}
+			});
+
+			// Optional: Notify extension when ready (though postMessage after setting HTML is usually sufficient)
+			// vscode.postMessage({ command: 'ready' });
+		</script>
+	</body>
+	</html>`;
 }
 
 async function sendToCopilotChat(text) {
 	try {
-		// Ensure Copilot Chat extension is active (optional but good practice)
+		// Ensure Copilot Chat extension is active
 		const copilotExtension = vscode.extensions.getExtension('github.copilot-chat');
 		if (!copilotExtension) {
 			vscode.window.showWarningMessage("GitHub Copilot Chat extension not found.");
 			return;
 		}
-		if (!copilotExtension.isActive) {
-			 // Only activate if necessary, might take a moment
-			await copilotExtension.activate();
-		}
+		// No need to explicitly activate, focusing the view should handle it.
 
-		// Use the official command to send text to Copilot Chat input
-		// This requires Copilot Chat v0.12.0 or later
-		await vscode.commands.executeCommand('github.copilot.chat.submit', { prompt: text });
+		// 1. Focus the Copilot Chat view input
+		// Use the command that focuses the input specifically if available,
+		// otherwise focus the view which usually focuses the input.
+		await vscode.commands.executeCommand('workbench.view.extension.copilot-chat');
+		// Small delay to ensure focus has shifted
+		await new Promise(resolve => setTimeout(resolve, 100));
 
-		// Optional: Focus the chat window after sending (might be disruptive)
-		// await vscode.commands.executeCommand('workbench.view.extension.copilot-chat');
+		// 2. Write the text to the clipboard
+		await vscode.env.clipboard.writeText(text);
+
+		// 3. Execute the paste command
+		await vscode.commands.executeCommand('editor.action.clipboardPasteAction');
+
+		// Optional: Attempt to trigger send/submit if paste doesn't automatically
+		// await vscode.commands.executeCommand('workbench.action.sendChat'); // Might be too general
+		// await vscode.commands.executeCommand('github.copilot.chat.sendMessage'); // Check if this exists
 
 	} catch (error) {
 		console.error("Error sending message to Copilot Chat:", error);
@@ -161,42 +192,11 @@ async function sendToCopilotChat(text) {
 	}
 }
 
-function getWebviewContent(soundUri) {
-	// Simple HTML with an audio element and script to play it on message
-	return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Whip Sound Player</title>
-</head>
-<body>
-    <audio id="whipSound" src="${soundUri}" preload="auto"></audio>
-    <script>
-        const audio = document.getElementById('whipSound');
-        const vscode = acquireVsCodeApi(); // VS Code API for communication
-
-        window.addEventListener('message', event => {
-            const message = event.data; // The json data that the extension sent
-            switch (message.command) {
-                case 'play':
-                    audio.currentTime = 0; // Rewind to start
-                    audio.play().catch(e => console.error("Audio playback failed:", e));
-                    break;
-            }
-        });
-
-        // Optional: Inform the extension when the webview is ready
-        // vscode.postMessage({ command: 'ready' });
-    </script>
-</body>
-</html>`;
-}
-
 // This method is called when your extension is deactivated
 function deactivate() {
-	if (webviewPanel) {
-		webviewPanel.dispose();
+	// Dispose the webview panel if it exists
+	if (whipAudioPanel) {
+		whipAudioPanel.dispose();
 	}
 	if (statusBarItem) {
 		statusBarItem.dispose();

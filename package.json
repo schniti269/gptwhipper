@@ -14,11 +14,13 @@
   ],
   "main": "./extension.js",
   "contributes": {
-    "commands": [{
-      "command": "gptwhipper.whip",
-      "title": "Whip GPT",
-      "icon": "$(zap)"
-    }],
+    "commands": [
+      {
+        "command": "gptwhipper.whip",
+        "title": "Whip GPT",
+        "icon": "$(zap)"
+      }
+    ],
     "menus": {
       "statusBar/context": [
         {
@@ -34,11 +36,14 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.99.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
-    "eslint": "^9.23.0",
+    "@types/vscode": "^1.99.0",
     "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1"
+    "@vscode/test-electron": "^2.4.1",
+    "eslint": "^9.23.0"
+  },
+  "dependencies": {
+    "play-sound": "^1.1.6"
   }
 }
