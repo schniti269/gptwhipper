@@ -77,7 +77,7 @@ async function playWhipSound(context) {
 	}
 
 	// Use play-sound to play the audio file
-	player.play(whipSoundPath, (err) => {
+	player.play(whipSoundPath, { ffplay: ['-nodisp', '-autoexit'] }, (err) => {
 		if (err) {
 			console.error("Error playing sound:", err);
 			vscode.window.showErrorMessage(`Failed to play whip sound: ${err.message || err}`);
