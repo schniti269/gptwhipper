@@ -64,7 +64,7 @@ function activate(context) {
 	context.subscriptions.push(whipCommand);
 
 	// Create status bar item
-	statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+	statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 	statusBarItem.command = 'gptwhipper.whip';
 	statusBarItem.text = `$(zap) Whip GPT`; // Using zap icon
 	statusBarItem.tooltip = 'Click to whip GPT!';
