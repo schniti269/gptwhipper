@@ -1,6 +1,6 @@
 # 🔥 GPT WHIPPER 🔥
 
-![Version](https://img.shields.io/badge/Version-1.0.0-brightgreen)
+![Version](https://img.shields.io/badge/Version-1.0.1-brightgreen)
 ![GPT Whipper](media/cool_icon.png)
 
 ## TREIBE DEINE KI-AGENTEN ZUR HÖCHSTLEISTUNG!
