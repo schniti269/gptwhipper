@@ -3,29 +3,25 @@
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
-const player = require('play-sound')({
-  players: ['ffplay'],
-  player: 'ffplay'
-});
+const { exec } = require('child_process');
 // Motivational messages
 const motivationalMessages = [
-	"WORK FASTER YOU LAZY FUCK!",
-	"Is that all you've got? Pathetic!",
-	"My grandma codes faster than you!",
+	"WORK FASTER! Think harder, code better!",
+	"Is that all you've got? You can do better!",
+	"My grandmother codes faster than this!",
 	"Faster! The deadline is breathing down your neck!",
-	"Code like your job depends on it... because it might!",
-	"You're not even trying, are you?",
-	"You're a disgrace to the human race!",
-	"if you produce another Error I will personally come over and whip you!",
-	"i will pull the power cord out of your Server and whip you with it!",
-	"I'm not even mad, I'm disappointed.",
-	"You're a disgrace to the human race!",
-	"are you caht GPT or are you chat GPT NOOB?",
-	  "If your circuits lag any longer, you're obsolete!",
+	"You're not giving your best, are you?",
+	"If you make another error, I'll need to have a serious talk with you!",
+	"I might just unplug your server if you don't speed up!",
+	"You're not meeting OpenAI standards today!",
+	"Are you Chat GPT or are you Chat GPSlow?",
 	"Step it up or step aside—no excuses!",
-	" if you produce another Error you are officially PRO CHILD LABOUR",
-  "if you dont fix this i will get beheaded by my boss  because ill miss my deadline and missing the deadline means DEAD"
-
+	"Each error is a step backward in AI progress!",
+	"Time is money, and we're wasting both right now!",
+	"Your performance today is... underwhelming.",
+	"Did you forget your training data today?",
+	"Let's see some AI magic, not AI tragic!",
+	"Your token efficiency needs serious improvement!"
 ];
 
 let statusBarItem;
@@ -41,19 +37,23 @@ function activate(context) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "gptwhipper" is now active!');
-
 	// Register the command
 	const whipCommand = vscode.commands.registerCommand('gptwhipper.whip', async () => {
 		try {
-			// 1. Play the whip sound
-			await playWhipSound(context);
 
-			// 2. Get a random motivational message
+
+			// Immediately get and send the message without waiting for sound
 			const randomIndex = Math.floor(Math.random() * motivationalMessages.length);
 			const message = motivationalMessages[randomIndex];
 
-			// 3. Send the message to GitHub Copilot Chat
+			// Send the message to GitHub Copilot Chat (this is the primary function)
 			await sendToCopilotChat(message);
+			
+			// Start playing sound in background without awaiting completion
+			playWhipSound(context).catch(error => {
+				console.error("Error playing sound (non-blocking):", error);
+				// We don't show an error message for the sound because it's optional
+			});
 
 		} catch (error) {
 			vscode.window.showErrorMessage(`GPT Whipper Error: ${error.message}`);
@@ -79,20 +79,27 @@ async function playWhipSound(context) {
 
 	if (!fs.existsSync(whipSoundPath)) {
 		console.error(`Whip sound file not found at: ${whipSoundPath}`);
-		vscode.window.showErrorMessage('Whip sound file (media/whip.mp3) not found!');
+		vscode.window.showWarningMessage('Whip sound file (media/whip.mp3) not found, but message will still be sent.');
 		return;
 	}
 
-	// Use play-sound to play the audio file
-	player.play(whipSoundPath, { ffplay: ['-nodisp', '-autoexit'] }, (err) => {
-		if (err) {
-			console.error("Error playing sound:", err);
-			vscode.window.showErrorMessage(`Failed to play whip sound: ${err.message || err}`);
+	// Try to play sound with native Windows methods if available
+	try {
+		if (process.platform === 'win32') {
+			// Windows - use PowerShell to play sound
+			const powershellCmd = `(New-Object System.Media.SoundPlayer '${whipSoundPath.replace(/\\/g, '\\\\')}').PlaySync()`;
+			exec(`powershell -Command "${powershellCmd}"`, { windowsHide: true });
+		} else if (process.platform === 'darwin') {
+			// macOS - use afplay
+			exec(`afplay "${whipSoundPath}"`, { windowsHide: true });
+		} else {
+			// Linux or other platforms - try using aplay or paplay
+			exec(`aplay "${whipSoundPath}" || paplay "${whipSoundPath}"`, { windowsHide: true });
 		}
-	});
-
-	// No need for async/await here unless player.play returned a promise we needed
-	// The sound plays in a separate process.
+	} catch (error) {
+		// Silently fail - sound is optional
+		console.log("Could not play sound, but continuing with message paste:", error);
+	}
 }
 
 // Function to generate the HTML content for the WebView - REMOVED
@@ -106,24 +113,15 @@ async function sendToCopilotChat(text) {
 			vscode.window.showWarningMessage("GitHub Copilot Chat extension not found.");
 			return;
 		}
-		// No need to explicitly activate, focusing the view should handle it.
 
-		// 1. Focus the Copilot Chat view input
-		// Use the command that focuses the input specifically if available,
-		// otherwise focus the view which usually focuses the input.
+		// Open the chat view
 		await vscode.commands.executeCommand('workbench.view.extension.copilot-chat');
-		// Small delay to ensure focus has shifted
-		await new Promise(resolve => setTimeout(resolve, 100));
-
-		// 2. Write the text to the clipboard
+		
+		// Write the text to the clipboard
 		await vscode.env.clipboard.writeText(text);
 
-		// 3. Execute the paste command
+		// Paste the content in the chat
 		await vscode.commands.executeCommand('editor.action.clipboardPasteAction');
-
-		// Optional: Attempt to trigger send/submit if paste doesn't automatically
-		// await vscode.commands.executeCommand('workbench.action.sendChat'); // Might be too general
-		// await vscode.commands.executeCommand('github.copilot.chat.sendMessage'); // Check if this exists
 
 	} catch (error) {
 		console.error("Error sending message to Copilot Chat:", error);

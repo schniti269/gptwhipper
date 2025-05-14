@@ -2,7 +2,7 @@
   "publisher": "schniti269",
   "displayName": "GPT Whipper",
   "description": "Plays a whip sound and sends motivational messages.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "engines": {
     "vscode": "^1.99.0"
   },
@@ -41,8 +41,7 @@
     "test": "vscode-test",
     "package": "vsce package",
     "publish": "vsce publish"
-  },
-  "devDependencies": {
+  },  "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
     "@types/vscode": "^1.99.0",
@@ -51,6 +50,5 @@
     "eslint": "^9.23.0"
   },
   "dependencies": {
-    "play-sound": "^1.1.6"
   }
 }
