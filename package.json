@@ -1,10 +1,16 @@
-{
-  "name": "gptwhipper",
+{  "name": "gptwhipper",
+  "publisher": "schniti269",
   "displayName": "GPT Whipper",
   "description": "Plays a whip sound and sends motivational messages.",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "engines": {
     "vscode": "^1.99.0"
+  },
+  "license": "MIT",
+  "icon": "media/cool_icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schniti269/gptwhipper"
   },
   "categories": [
     "Other"
@@ -29,11 +35,12 @@
         }
       ]
     }
-  },
-  "scripts": {
+  },  "scripts": {
     "lint": "eslint .",
     "pretest": "npm run lint",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "package": "vsce package",
+    "publish": "vsce publish"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
